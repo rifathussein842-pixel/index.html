@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Savings Swipe App</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #121212;
+      color: #fff;
+      overflow-x: hidden; /* ✅ Only horizontal scroll is hidden */
+    }
+
+    .swiper-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .month {
+      scroll-snap-align: start;
+      flex: 0 0 100%;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    h1 {
+      text-align: center;
+      color: #00ff00;
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #1e1e1e;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border: 1px solid #444;
+    }
+
+    th {
+      background-color: #006400;
+    }
+
+    .status {
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .done {
+      color: #00ff00;
+    }
+
+    .not-done {
+      color: #ff4444;
+    }
+
+    .balanceBox, .extraForm {
+      margin: 20px auto;
+      width: 90%;
+      text-align: center;
+      border: 2px solid #00ff00;
+      padding: 15px;
+      border-radius: 8px;
+      background-color: #181818;
+    }
+
+    .extra-entry {
+      margin-top: 10px;
+      background-color: #2a2a2a;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #00ff00;
+    }
+
+    .popup {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(30, 30, 30, 0.95);
+      color: #fff;
+      padding: 30px;
+      border: 2px solid #00ff00;
+      border-radius: 15px;
+      text-align: center;
+      z-index: 9999;
+      width: 80%;
+      max-width: 400px;
+    }
+
+    .popup h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+      font-weight: bold;
+      line-height: 1.4;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 5px;
+      border: none;
+      font-size: 16px;
+    }
+
+    input {
+      width: 40%;
+    }
+
+    button {
+      background-color: #006400;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #00aa00;
+    }
+
+    .finalizeBtn {
+      display: block;
+      width: 90%;
+      margin: 30px auto 20px;
+      font-size: 18px;
+      padding: 15px;
+      border-radius: 10px;
+      border: 3px solid orange;
+      background-color: green;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="swiper-container" id="swiper">
+    <div class="month" id="august"></div>
+    <div class="month" id="september"></div>
+    <div class="month" id="october"></div>
+    <div class="month" id="november"></div>
+    <div class="month" id="december"></div>
+    <div class="month" id="january"></div>
+  </div>
+
+  <script>
+    const months = [
+      { id: 'august', name: 'August 2025', days: 31, start: '2025-08-01' },
+      { id: 'september', name: 'September 2025', days: 30, start: '2025-09-01' },
+      { id: 'october', name: 'October 2025', days: 31, start: '2025-10-01' },
+      { id: 'november', name: 'November 2025', days: 30, start: '2025-11-01' },
+      { id: 'december', name: 'December 2025', days: 31, start: '2025-12-01' },
+      { id: 'january', name: 'January 2026', days: 31, start: '2026-01-01' }
+    ];
+
+    months.forEach(month => createMonthSection(month));
+
+    function createMonthSection({ id, name, days, start }) {
+      const container = document.getElementById(id);
+      if (!container) return;
+      const wrapper = document.createElement('div');
+
+      wrapper.innerHTML = `
+        <h1>${name} Daily Savings Tracker</h1>
+        <table><thead>
+          <tr><th>Date</th><th>Day</th><th>Amount</th><th>Status</th></tr>
+        </thead><tbody id="table-${id}"></tbody></table>
+        <div class="balanceBox">
+          <div>Daily Save: <span id="total-${id}">0</span> Taka</div>
+          <div>Extra From Others: <span id="extra-${id}">0</span> Taka</div>
+          <hr style="border-color:#00ff00;">
+          <div>Total Balance: <span id="grand-${id}">0</span> Taka</div>
+        </div>
+        <div class="extraForm">
+          <h3>Add Extra Income</h3>
+          <input type="number" id="input-${id}" placeholder="Enter amount only">
+          <button onclick="addExtra('${id}')">Add</button>
+          <div id="list-${id}"></div>
+        </div>
+        <button class="finalizeBtn" onclick="finalize('${id}')">Finalize Month</button>
+        <div class="popup" id="popup-${id}">
+          <h2>🎉 অভিনন্দন! আপনি সফলভাবে মাস শেষ করেছেন 🎉</h2>
+          <button onclick="document.getElementById('popup-${id}').style.display='none'">Close</button>
+        </div>
+      `;
+      container.appendChild(wrapper);
+
+      const tbody = wrapper.querySelector(`#table-${id}`);
+      const startDate = new Date(start);
+      const options = { weekday: 'long' };
+
+      for (let i = 0; i < days; i++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + i);
+        const d = String(date.getDate()).padStart(2, '0');
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const y = date.getFullYear();
+        const dayName = date.toLocaleDateString('en-US', options);
+        const amount = (dayName === 'Friday') ? 60 : 50;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${d}-${m}-${y}</td>
+          <td>${dayName}</td>
+          <td>${amount} Taka</td>
+          <td class="status not-done" data-amount="${amount}" onclick="toggleStatus(this, '${id}')">✘</td>
+        `;
+        tbody.appendChild(row);
+      }
+    }
+
+    const state = {};
+
+    function toggleStatus(cell, id) {
+      const amt = parseInt(cell.getAttribute("data-amount"));
+      if (!state[id]) state[id] = { total: 0, extra: 0, finalized: false };
+      if (state[id].finalized) return;
+
+      if (cell.classList.contains("not-done")) {
+        cell.classList.remove("not-done");
+        cell.classList.add("done");
+        cell.innerText = "✔";
+        state[id].total += amt;
+      } else {
+        cell.classList.remove("done");
+        cell.classList.add("not-done");
+        cell.innerText = "✘";
+        state[id].total -= amt;
+      }
+      updateTotals(id);
+    }
+
+    function addExtra(id) {
+      if (!state[id]) state[id] = { total: 0, extra: 0, finalized: false };
+      if (state[id].finalized) return;
+
+      const input = document.getElementById(`input-${id}`);
+      const value = parseInt(input.value);
+      if (!isNaN(value)) {
+        state[id].extra += value;
+        const div = document.createElement("div");
+        div.className = "extra-entry";
+        div.innerText = `${value} Taka (tap to remove)`;
+        div.onclick = function () {
+          if (state[id].finalized) return;
+          div.remove();
+          state[id].extra -= value;
+          updateTotals(id);
+        };
+        document.getElementById(`list-${id}`).appendChild(div);
+        input.value = "";
+        updateTotals(id);
+      }
+    }
+
+    function updateTotals(id) {
+      document.getElementById(`total-${id}`).innerText = state[id].total;
+      document.getElementById(`extra-${id}`).innerText = state[id].extra;
+      document.getElementById(`grand-${id}`).innerText = state[id].total + state[id].extra;
+    }
+
+    function finalize(id) {
+      if (!state[id]) return;
+      const done = document.querySelectorAll(`#table-${id} .done`);
+      if (done.length === 0) return;
+      state[id].finalized = true;
+      document.getElementById(`popup-${id}`).style.display = 'block';
+    }
+
+    const container = document.querySelector('.swiper-container');
+    let currentIndex = 0;
+    container.addEventListener('touchstart', handleTouchStart, false);
+    container.addEventListener('touchend', handleTouchEnd, false);
+    let xDown = null;
+
+    function handleTouchStart(evt) {
+      xDown = evt.touches[0].clientX;
+    }
+
+    function handleTouchEnd(evt) {
+      if (!xDown) return;
+      let xUp = evt.changedTouches[0].clientX;
+      let xDiff = xDown - xUp;
+      if (Math.abs(xDiff) > 50) {
+        const totalMonths = container.children.length;
+        if (xDiff > 0 && currentIndex < totalMonths - 1) {
+          currentIndex++;
+        } else if (xDiff < 0 && currentIndex > 0) {
+          currentIndex--;
+        }
+        container.scrollTo({
+          left: container.offsetWidth * currentIndex,
+          behavior: 'smooth'
+        });
+      }
+      xDown = null;
+    }
+  </script>
+</body>
+</html>
